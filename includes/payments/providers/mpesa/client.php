@@ -12,18 +12,6 @@ class MpesaClient implements PaymentProviderInterface {
     protected string $encodedString;
     protected ?string $accessToken = null;
 
-    // constructor
-    // public function __construct(array $config) {
-    //     $this->baseUrl = $config['baseUrl'];
-    //     $this->consumerKey = $config['consumerKey'];
-    //     $this->consumerSecret = $config['consumerSecret'];
-    //     $this->passkey = $config['passkey'];
-    //     $this->shortCode = $config['shortCode'];
-    //     $this->encodedString = base64_encode(
-    //         $this->consumerKey . ':' . $this->consumerSecret
-    //     );
-    // }
-
     // AUTHENTICATE
     public function authenticate() {
         // get from cache './token.json'
@@ -163,7 +151,6 @@ class MpesaClient implements PaymentProviderInterface {
     } 
     public function getProviderName() {
         // code here
-
     } 
  }
 ?>
