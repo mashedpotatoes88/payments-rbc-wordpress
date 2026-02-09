@@ -1,4 +1,6 @@
 <?php
+require_once GIVING_PLUGIN_PATH . 'includes/payments/providers/dpo-pay/client.php';
+require_once GIVING_PLUGIN_PATH . 'includes/payments/providers/mpesa/client.php';
 if (!defined('ABSPATH')) {
     exit;
 }

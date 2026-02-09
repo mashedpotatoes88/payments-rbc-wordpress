@@ -1,6 +1,5 @@
 <?php
-require_once './includes/payments/interfaces/payment-provider-interface.php';
-
+require_once GIVING_PLUGIN_PATH . 'includes/payments/interfaces/payment-provider-interface.php';
 
 class MpesaClient implements PaymentProviderInterface {
     protected string $baseUrl;
@@ -12,6 +11,19 @@ class MpesaClient implements PaymentProviderInterface {
     protected string $encodedString;
     protected ?string $accessToken = null;
 
+	public function __construct(){
+		$this->baseUrl        = MPESA_ENV === 'production'
+            ? 'https://api.safaricom.co.ke'
+            : 'https://sandbox.safaricom.co.ke';
+
+        $this->consumerKey    = MPESA_CONSUMER_KEY;
+        $this->consumerSecret = MPESA_CONSUMER_SECRET;
+        $this->passkey        = MPESA_PASSKEY;
+        $this->shortCode      = MPESA_SHORTCODE;
+		$this->encodedString  = base64_encode(
+			$this->consumerKey . ':' . $this->consumerSecret
+		);
+    }
     // AUTHENTICATE
     public function authenticate() {
         // get from cache './token.json'
@@ -105,11 +117,24 @@ class MpesaClient implements PaymentProviderInterface {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-        // SEND REQUEST
-        $response = curl_exec($ch);
+        try {
+            // SEND REQUEST
+            $response = curl_exec($ch);
+    
+            // RETURN
+            return new WP_REST_Response([
+                'status' => 200,
+                'response' => $response
+            ], 200);
+        }catch (Throwable $e) {
+            error_log('MPESA ERROR: ' . $e->getMessage());
+            error_log('MPESA TRACE: ' . $e->getTraceAsString());
 
-        // RETURN
-        return json_decode($response, true);
+            return new WP_REST_Response([
+                'status' => 500,
+                'error'  => 'M-Pesa request failed'
+            ], 500);
+        }
     }
 
     public function handleCallback(array $payload): array {

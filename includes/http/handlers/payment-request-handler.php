@@ -1,13 +1,12 @@
 <?php
-require_once './payments/providers/mpesa/client.php';
-require_once './payments/providers/dpo-pay/client.php';
+require_once GIVING_PLUGIN_PATH . 'includes/services/payment-request-service.php';
 
-function giving_handle_payment_request(WP_REST_REQUEST $request) {
+function giving_handle_payment_request(WP_REST_Request $request) {
     // 1. Extract
     $data = $request->get_json_params();
 
     // 2. Validate
-    if (empty($data['amount']) || empty($data['$provider'])) {
+    if (empty($data['amount']) || empty($data['provider'])) {
         return new WP_Error(
             'invalid_request',
             'Missing required fields',
@@ -17,9 +16,9 @@ function giving_handle_payment_request(WP_REST_REQUEST $request) {
 
     // 3. Normalise
     $payload = [
-        'provider'     => $data['provider'],
+        'provider'     => $data['provider'] ?? null,
         'amount'       => (int) $data['amount'],
-        'phone_number' => $data['phone_number'] ?? null,
+        'phone_number' => $data['phone'] ?? null,
         'reference'    => $data['reference'] ?? 'Giving',
         'description'  => $data['description'] ?? 'Giving'
     ];

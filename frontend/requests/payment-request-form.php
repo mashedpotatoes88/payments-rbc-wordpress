@@ -6,43 +6,6 @@ if (!defined('ABSPATH')) {
 }
 // get list of giving causes 
 $giving_causes = require GIVING_PLUGIN_PATH . 'includes/config/giving-causes.php';
-
-// endpoint
-$endpoint = esc_url(rest_url('giving/v1/payment'));
-
-// submit function
-if (isset($_POST['giving_submit'])) {
-  $amount = intval($_POST['amount'] ?? 0);
-  $phone = sanitize_text_field($_POST['phone'] ?? 0);
-  // validate
-  if ($amount <= 0 || empty($phone)) {
-      echo '<p style="color:red;">Invalid input.</p>';
-      return;
-  }
-  echo '<p>Processing payment...</p>';
-  // POST request
-  $response = wp_remote_post($endpoint, [
-    'headers' => [
-        'Content-Type' => 'application/json',
-    ],
-    'body' => json_encode([
-        'amount' => $amount,
-        'phone'  => $phone,
-    ]),
-    'timeout' => 20,
-  ]);
-
-  if (is_wp_error($response)) {
-    echo '<p style="color:red;">Request failed.</p>';
-    return;
-  }
-
-  $body = wp_remote_retrieve_body($response);
-
-  echo '<pre>';
-  echo esc_html($body);
-  echo '</pre>';
-}
 ?>
 
 <div id="giving-widget">
@@ -148,7 +111,7 @@ if (isset($_POST['giving_submit'])) {
 <!-- FORM LOGIC -->
 <h2>Ways to Give</h2>
 
-<form id="givingForm" method="post">
+<form id="givingForm">
 
   <!-- CAUSES -->
   <div class="group">
@@ -227,7 +190,38 @@ if (isset($_POST['giving_submit'])) {
 
   radios.forEach(r => r.addEventListener('change', toggleFields));
   toggleFields();
-})(); 
+
+  // SUBMIT FORM
+  const form = document.getElementById('givingForm');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    alert("test 1");
+
+    const data = {
+      amount: form.amount.value,
+      phone: form.mpesa_phone.value,
+      provider: "mpesa"
+    };
+
+    try {
+      const res = await fetch("<?= esc_url(rest_url('giving/v1/payment')) ?>", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const json = await res.json();
+      console.log(json);
+      alert("Payment initiated.");
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed.");
+    }
+  });
+
+})();
 </script>
 
 </div>
