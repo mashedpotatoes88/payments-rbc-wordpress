@@ -114,7 +114,7 @@ class DpoPayClient implements PaymentProviderInterface {
 
 
 
-    public function handleCallback() {
+    public function processCallback(array $payload) {
         // code here
 
     } 

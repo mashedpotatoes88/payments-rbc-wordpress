@@ -122,22 +122,22 @@ class MpesaClient implements PaymentProviderInterface {
             $response = curl_exec($ch);
     
             // RETURN
-            return new WP_REST_Response([
-                'status' => 200,
-                'response' => $response
-            ], 200);
+            return [
+                'success' => true,
+                'raw_response' => $response
+            ];
         }catch (Throwable $e) {
             error_log('MPESA ERROR: ' . $e->getMessage());
             error_log('MPESA TRACE: ' . $e->getTraceAsString());
 
-            return new WP_REST_Response([
-                'status' => 500,
+            return [
+                'success' => false,
                 'error'  => 'M-Pesa request failed'
-            ], 500);
+            ];
         }
     }
 
-    public function handleCallback(array $payload): array {
+    public function processCallback(array $payload): array {
         $stkCallback = $payload['Body']['stkCallback'] ?? null;
         // 1. if callback is somehow empty
         if (!$stkCallback) {

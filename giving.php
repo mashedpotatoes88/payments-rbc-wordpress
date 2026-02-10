@@ -8,12 +8,16 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-// define path to this folder
+// Definitions
+    // path to this folder
 define('GIVING_PLUGIN_PATH', plugin_dir_path(__FILE__));
+    // routes
+define('ROUTE_CALLBACK', 'giving/v1/callback/');
 
-// requirements
+// Requirements
 require_once GIVING_PLUGIN_PATH . 'includes/http/handlers/payment-request-handler.php';
 require_once GIVING_PLUGIN_PATH . 'includes/http/routes/payment-request-route.php';
+
 // WP Shortcode
 add_shortcode('giving_payment_form', function () {
     return render_payment_request_form();
@@ -28,5 +32,33 @@ function render_payment_request_form() {
     }
     require $file;
     return ob_get_clean();
+}
+
+// WP Enqueue Script
+add_action('wp_enqueue_scripts', 'giving_enqueue_assets');
+
+function giving_enqueue_assets() {
+    // Only load on pages where the shortcode is used
+    if (!is_singular()){
+        return;
+    }
+
+    global $post;
+    if (!$post || !has_shortcode($post->post_content, 'giving_payment_form')) {
+        return;
+        }
+    // logic
+    wp_enqueue_script(
+        'giving-payment',
+        plugins_url('assets/js/giving-payment.js', __FILE__),
+        [], // deps
+        '1.0', 
+        true // load in footer
+    );
+
+    wp_localize_script('giving-payment', 'GivingConfig', [
+        'paymentUrl' => rest_url('giving/v1/payment'),
+        'callbackUrl' => rest_url('giving/v1/callback')
+    ]);
 }
 ?>

@@ -9,7 +9,7 @@ interface PaymentProviderInterface {
         // core functions
     public function authenticate();
     public function initiateTransaction(array $payload);
-    public function handleCallback(array $payload);
+    public function processCallback(array $payload);
     public function verifyTransaction();
         // helper functions
     public function getProviderName();
