@@ -3,10 +3,10 @@ require_once GIVING_PLUGIN_PATH . 'includes/services/payment-request-service.php
 
 function handle_payment_request(WP_REST_Request $request) {
     // 1. Extract
-    $data = $request->get_json_params();
-
+    $data = $request->get_params();
+    
     // 2. Validate
-    if (empty($data['amount']) || empty($data['provider'])) {
+    if (empty($data['amount']) || empty($data['payment_method'])) {
         return new WP_Error(
             'invalid_request',
             'Missing required fields',
@@ -16,9 +16,9 @@ function handle_payment_request(WP_REST_Request $request) {
 
     // 3. Normalise
     $payload = [
-        'provider'     => $data['provider'] ?? null,
+        'provider'     => $data['payment_method'] ?? null,
         'amount'       => (int) $data['amount'],
-        'phone_number' => $data['phone'] ?? null,
+        'phone_number' => $data['mpesa_phone'] ?? null,
         'callbackUrl'  => rest_url('giving/v1/callback'),
         'reference'    => $data['reference'] ?? 'Giving',
         'description'  => $data['description'] ?? 'Giving'
@@ -32,7 +32,7 @@ function handle_payment_request(WP_REST_Request $request) {
 
     // 5. return
     return [
-        'status' => 'Payment request initiated by handler!',
+        'status' => "Payment request initiated by handler to {$payload['provider']}!",
         'service response'   => $result
     ];
 }

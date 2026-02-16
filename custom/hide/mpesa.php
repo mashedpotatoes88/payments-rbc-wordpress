@@ -1,5 +1,7 @@
 <?php
 // M-Pesa 
+    // redirect page
+define('MPESA_REDIRECT_URL', 'https://www.ridgewaysbaptistchurch.org/giving/mpesa');
 define('MPESA_CONSUMER_KEY', 'sb81XYihydDbvp2tEAVbiyDswnzVyeH6hKGRT1BnwjJXGINs');
 define('MPESA_CONSUMER_SECRET', 'pScYjTGkAyWDod9gLdugOJ0KgJG7JBuAgL8sHk5yBzAGFP5s2R33PL1a1LYvrScx');
 define('MPESA_SHORTCODE', '174379');

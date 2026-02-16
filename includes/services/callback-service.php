@@ -20,7 +20,7 @@ class CallbackService {
     protected function resolveProvider(string $provider) {
         return match ($provider) {
             'mpesa'   => new MpesaClient(),
-            'dpo-pay' => new DpoPayClient(),
+            'dpo-pay' => new DpoPayClient([]),
             default   => throw new Exception('Unsupported Provider')
         };
     }

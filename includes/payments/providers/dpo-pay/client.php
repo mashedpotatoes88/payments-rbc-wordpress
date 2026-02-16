@@ -1,125 +1,121 @@
 <?php
-require_once './payments/interfaces/payment-provider-interface.php';
+require_once GIVING_PLUGIN_PATH . 'includes/payments/interfaces/payment-provider-interface.php';
     
 
 class DpoPayClient implements PaymentProviderInterface {
-    protected string $baseUrl;
-    protected string $consumerKey;
-    protected string $consumerSecret;
-    protected string $passkey;
-    protected string $shortCode;
+    // predefined
+        // http
+    protected string $endpoint_createToken;
+    protected string $endpoint_chargeToken;
+    protected string $redirectURL;
+    protected string $backURL;
+        // merchant details: Ridgeways Baptist Church
+    protected string $companyToken;
+    protected string $serviceType;
+    protected string $serviceDescription;
 
-    protected string $encodedString = "c2I4MVhZaWh5ZERidnAydEVBVmJpeURzd256VnllSDZoS0dSVDFCbndqSlhHSU5zOnBTY1lqVEdrQXlXRG9kOWdMZHVnT0owS2dKRzdKQnVBZ0w4c0hrNXlCekFHRlA1czJSMzNQTDFhMUxZdnJTY3g=";
-    protected ?string $accessToken = null;
+    // passed
+    protected int $paymentAmount;
+    protected string $paymentCurrency;
+    protected string $companyRef;
+
+    public function __construct(array $config){
+        // predefined
+			// http
+        $this->redirectURL = DPOPAY_REDIRECT_URL;
+        $this->backURL = DPOPAY_BACK_URL;
+        $this->endpoint_createToken = DPOPAY_ENDPOINT_CREATE_TOKEN;
+        $this->endpoint_chargeToken = DPOPAY_REDIRECT_PAGE;
+			// credentials
+        $this->companyToken = DPOPAY_COMPANY_TOKEN;
+        $this->paymentCurrency = DPOPAY_CURRENCIES_LIST[1];
+        $this->serviceType = DPOPAY_SERVICE_TYPE;
+        $this->serviceDescription = DPOPAY_SERVICE_DESCRIPTION;
+        // passed in
+        $this->paymentAmount = $config['amount'];
+        $this->companyRef = $config['companyRef'] ?? 'unspecified';
+    }
 
     // AUTHENTICATE
     public function authenticate() {
-        // get from cache './token.json'
-        $accessToken = $this->getCachedToken();
-        if ($accessToken) {
-            return $accessToken;
-        }
+        $request = 'createToken';
+        $timestamp = date('Y/m/d H:i:s');
+        $xmlData = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <API3G>
+            <CompanyToken>{$this->companyToken}</CompanyToken>
+            <Request>{$request}</Request>
+            <Transaction>
+                <PaymentAmount>{$this->paymentAmount}</PaymentAmount>
+                <PaymentCurrency>{$this->paymentCurrency}</PaymentCurrency>
+                <CompanyRef>49FKEOA</CompanyRef>
+                <RedirectURL>{$this->redirectURL}</RedirectURL>
+                <BackURL>{$this->backURL}</BackURL>
+                <CompanyRefUnique>0</CompanyRefUnique>
+                <PTL>5</PTL>
+            </Transaction>
+            <Services>
+                <Service>
+                    <ServiceType>{$this->serviceType}</ServiceType>
+                    <ServiceDescription>{$this->serviceDescription}</ServiceDescription>
+                    <ServiceDate>{$timestamp}</ServiceDate>
+                </Service>
+            </Services>
+        </API3G>";
 
-        // PREPARE FOR REQUEST 
-            // init cURL
+        // PREP REQUEST
+            // init curl
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 
-        "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-        );
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Basic " . $this->encodedString
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-        // SEND REQUEST
-        $response = curl_exec($ch); // get response
-        $data = json_decode($response, true); // decode response
-
-        // STORE IN FILE AND RETURN
-        $accessToken = $data['access_token'];
-        $expiresIn = $data['expires_in'];
-        $this->cacheToken($accessToken, $expiresIn);
-        return $accessToken ?? null;
-    }
-        // helper function 1
-    private function getCachedToken() {
-        // check if file exists
-        $path = __DIR__ . '/token.json';
-        if (!file_exists($path)) {
-            return null;
+        if (!$ch) {
+            die("Couldn't initialize a cURL handle");
         }
-        // check if current time is past expiry time
-        $data = json_decode(file_get_contents($path), true);
-        if ($data['expires_at'] <= time()) {
-            return null;
-        }
-        // else return the valid access token
-        return $data['access_token'];
-    }
-        // helper function 2
-    private function cacheToken($accessToken, $expiresIn) {
-        $data = [
-            'access_token' => $accessToken,
-            'expires_at' => time() + $expiresIn - 60
-        ];
-        file_put_contents(__DIR__ . '/token.json', json_encode($data));
-    }
-
-    // INITIATE TRANSACTION
-    public function initiateTransaction(array $payload) {
-        // pre-set
-        $accessToken = $this->authenticate(); //get access token
-        $timestamp = date('YmdHis');
-        $password = base64_encode(
-            $this->shortCode . $this->passkey . $timestamp
-        );
-
-            // request body
-        $requestBody = [
-            'BusinessShortCode' => $this->shortCode,
-            'Password'          => $password,
-            'Timestamp'         => $timestamp,
-            'TransactionType'   => 'CustomerPayBillOnline',
-            'Amount'            => $payload['amount'],
-            'PartyA'            => $payload['phone_number'],
-            'PartyB'            => $this->shortCode,
-            'PhoneNumber'       => $payload['phone_number'],
-            'CallBackURL'       => $payload['callback_url'],
-            'AccountReference'  => $payload['reference'],
-            'TransactionDesc'   => $payload['description'] ?? 'Giving'
-        ];
-        
-        // PREPARE FOR REQUEST
-            // init cURL
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 
-        "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-        );
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer {$accessToken}",
-            "Content-Type: application/json"
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            // set curl options
+        curl_setopt($ch, CURLOPT_URL, $this->endpoint_createToken);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/xml'));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $xmlData);
 
         // SEND REQUEST
         $response = curl_exec($ch);
-
-        // RETURN
-        return json_decode($response, true);
+        $data = simplexml_load_string($response);
+        return $data;
     }
-
-
-
+    // INITIATE TRANSACTION
+    public function initiateTransaction(array $payload) {
+        // call required functions
+            // get transaction Token
+        $transactionToken = (string) $this->authenticate()->TransToken;         
+        // get payment url for redirect
+        $dpo_redirect_url = $this->endpoint_chargeToken . $transactionToken;
+        wp_redirect($dpo_redirect_url);
+    }
     public function processCallback(array $payload) {
         // code here
-
     } 
-    public function verifyTransaction() {
-        // code here
+    public function verifyTransaction($transactionToken) {
+        $xmlData = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <API3G>
+            <CompanyToken>{$this->companyToken}</CompanyToken>
+            <Request>verifyToken</Request>
+            <TransactionToken>{$transactionToken}</TransactionToken>
+        </API3G>";
+
+        // PREPARE FOR REQUEST
+            // init cURL
+        $ch = curl_init();
+            // set curl options
+        curl_setopt($ch, CURLOPT_URL, $this->endpoint_createToken);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/xml'));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $xmlData);
+
+        // SEND REQUEST
+        $response = curl_exec($ch);
+            // return
+        return simplexml_load_string($response);
 
     } 
     public function getProviderName() {

@@ -10,7 +10,7 @@ interface PaymentProviderInterface {
     public function authenticate();
     public function initiateTransaction(array $payload);
     public function processCallback(array $payload);
-    public function verifyTransaction();
+    public function verifyTransaction(string $transactionToken);
         // helper functions
     public function getProviderName();
 }

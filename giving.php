@@ -11,12 +11,13 @@ if (!defined('ABSPATH')) {
 // Definitions
     // path to this folder
 define('GIVING_PLUGIN_PATH', plugin_dir_path(__FILE__));
-    // routes
-define('ROUTE_CALLBACK', 'giving/v1/callback/');
+define('GIVING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Requirements
 require_once GIVING_PLUGIN_PATH . 'includes/http/handlers/payment-request-handler.php';
 require_once GIVING_PLUGIN_PATH . 'includes/http/routes/payment-request-route.php';
+require_once GIVING_PLUGIN_PATH . 'includes/http/handlers/callback-handler.php';
+require_once GIVING_PLUGIN_PATH . 'includes/http/routes/callback-route.php';
 
 // WP Shortcode
 add_shortcode('giving_payment_form', function () {
@@ -25,7 +26,7 @@ add_shortcode('giving_payment_form', function () {
 
 function render_payment_request_form() {
     ob_start();
-    $file = GIVING_PLUGIN_PATH . 'frontend/requests/payment-request-form.php';
+    $file = GIVING_PLUGIN_PATH . 'frontend/forms/payment-request-form.php';
 
     if (!file_exists($file)) {
         return '<p>Giving form template not found.</p>';

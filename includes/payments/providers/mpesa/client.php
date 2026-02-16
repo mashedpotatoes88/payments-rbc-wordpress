@@ -11,6 +11,8 @@ class MpesaClient implements PaymentProviderInterface {
     protected string $encodedString;
     protected ?string $accessToken = null;
 
+    protected string $redirectURL;
+
 	public function __construct(){
 		$this->baseUrl        = MPESA_ENV === 'production'
             ? 'https://api.safaricom.co.ke'
@@ -20,6 +22,7 @@ class MpesaClient implements PaymentProviderInterface {
         $this->consumerSecret = MPESA_CONSUMER_SECRET;
         $this->passkey        = MPESA_PASSKEY;
         $this->shortCode      = MPESA_SHORTCODE;
+        $this->redirectURL    = MPESA_REDIRECT_URL;;
 		$this->encodedString  = base64_encode(
 			$this->consumerKey . ':' . $this->consumerSecret
 		);
@@ -93,11 +96,11 @@ class MpesaClient implements PaymentProviderInterface {
             'Password'          => $password,
             'Timestamp'         => $timestamp,
             'TransactionType'   => 'CustomerPayBillOnline',
-            'Amount'            => $payload['amount'],
+            'Amount'            => (int) $payload['amount'],
             'PartyA'            => $payload['phone_number'],
             'PartyB'            => $this->shortCode,
             'PhoneNumber'       => $payload['phone_number'],
-            'CallBackURL'       => $payload['callback_url'],
+            'CallBackURL'       => $payload['callbackUrl'],
             'AccountReference'  => $payload['reference'],
             'TransactionDesc'   => $payload['description'] ?? 'Giving'
         ];
@@ -124,7 +127,8 @@ class MpesaClient implements PaymentProviderInterface {
             // RETURN
             return [
                 'success' => true,
-                'raw_response' => $response
+                'raw_response' => $response,
+                'callbackUrl' => $requestBody['CallBackUrl']
             ];
         }catch (Throwable $e) {
             error_log('MPESA ERROR: ' . $e->getMessage());
@@ -170,7 +174,7 @@ class MpesaClient implements PaymentProviderInterface {
             'raw'       => $payload
         ];         
     } 
-    public function verifyTransaction() {
+    public function verifyTransaction(string $transactionToken) {
         // code here
 
     } 

@@ -1,56 +1,84 @@
 (function () {
-  const radios = document.querySelectorAll('#givingForm input[name="payment_method"]');
-  const card = document.getElementById('cardFields');
+  const widget = document.getElementById('giving-widget');
+  const form = document.getElementById('givingForm');
   const mpesa = document.getElementById('mpesaFields');
-  const paypal = document.getElementById('paypalFields');
+  const options = widget.querySelectorAll('.payment-option');
+  const paymentMethodInput = document.getElementById('paymentMethod');
 
-  function toggleFields() {
-    card.classList.add('hidden');
-    mpesa.classList.add('hidden');
-    paypal.classList.add('hidden');
-
-    const selected = document.querySelector('#givingForm input[name="payment_method"]:checked').value;
-    if (selected === 'card') card.classList.remove('hidden');
-    if (selected === 'mpesa') mpesa.classList.remove('hidden');
-    if (selected === 'paypal') paypal.classList.remove('hidden');
+  function clearActive() {
+    options.forEach(opt => opt.classList.remove('active'));
   }
 
-  radios.forEach(r => r.addEventListener('change', toggleFields));
-  toggleFields();
+  function getSelectedProvider() {
+    return paymentMethodInput.value || null;
+  }
 
-  // SUBMIT FORM
-  const form = document.getElementById('givingForm');
+  function toggleFieldsAndProvider() {
+    mpesa.classList.add('hidden');
 
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
+    const provider = getSelectedProvider();
+    if (!provider) return;
 
-    // conditional pre-set
-        // 1. provider
-    let provider = null;
-    if (form.mpesa_phone && form.mpesa_phone.value) {
-      provider = 'mpesa';
+    if (provider === 'mpesa') {
+      mpesa.classList.remove('hidden');
     }
+  }
 
-    const data = {
-      amount: form.amount.value,
-      phone: form.mpesa_phone.value,
-      provider: provider
-    };
-
-    try {
-      const res = await fetch(GivingConfig.paymentUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      const json = await res.json();
-      console.log(json);
-      alert("Payment initiated.");
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed.");
+  // Handle clicking payment options
+    // remove paypal
+  
+  options.forEach(option => {
+    provider = option.dataset.provider;
+    if (provider === 'paypal') {
+      option.classList.add('disabled');
+      return;
     }
+    option.addEventListener('click', () => {
+      const provider = option.dataset.provider;
+
+      if (!provider) return;
+
+      clearActive();
+      option.classList.add('active');
+
+      paymentMethodInput.value = provider;
+      toggleFieldsAndProvider();
+    });
   });
 
+  form.addEventListener('submit', async function (e) {
+    const provider = getSelectedProvider();
+    if (!provider) {
+      e.preventDefault();
+      alert('Please select a payment method.');
+      return;
+    }
+    if (provider === 'mpesa') {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+
+        if (data && data['service response'] && data['service response'].data) {
+          alert('M-Pesa prompt sent to your phone. Please complete the payment.');
+        } else {
+          alert('Failed to initiate M-Pesa payment. Please try again.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error. Please try again.');
+      }
+    }
+    // else: card / PayPal continue with normal redirect
+  });
 })();
